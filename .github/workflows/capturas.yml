@@ -21,7 +21,7 @@ jobs:
         run: |
           mkdir evidencias
           curl --fail --silent --show-error --retry 3 --retry-all-errors --max-time 15 https://artur-mf.github.io/portfolio-senai/ -o /tmp/portfolio-publicado.html
-          rg --quiet 'Artur Medeiros · Dados e Automação' /tmp/portfolio-publicado.html
+          grep -Fq 'Artur Medeiros · Dados e Automação' /tmp/portfolio-publicado.html
           curl --fail --silent --show-error --max-time 15 https://artur-mf.github.io/portfolio-senai/style.css -o /dev/null
           curl --fail --silent --show-error --max-time 15 https://artur-mf.github.io/portfolio-senai/images/marca.svg -o /dev/null
           echo 'HTML, CSS e imagem conferidos no endereço público.'
