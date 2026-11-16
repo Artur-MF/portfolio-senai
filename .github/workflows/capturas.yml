@@ -1,0 +1,55 @@
+name: Capturas da atividade DevOps
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  screenshots:
+    if: github.head_ref == 'evidencias-atividade-devops'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Preparar captura
+        run: |
+          npm install --no-audit --no-fund playwright@1.55.1
+          npx playwright install chromium
+      - name: Capturar as execuções públicas
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir evidencias
+          echo 'DEPLOY_URL='$(gh api repos/Artur-MF/portfolio-senai/actions/workflows/deploy.yml/runs?branch=main --jq '.workflow_runs[0].html_url // empty' || true) >> "$GITHUB_ENV"
+          echo 'DEPLOY_STATE='$(gh api repos/Artur-MF/portfolio-senai/actions/workflows/deploy.yml/runs?branch=main --jq '.workflow_runs[0].conclusion // empty' || true) >> "$GITHUB_ENV"
+      - name: Capturar as telas do GitHub Actions
+        run: |
+          node <<'JS'
+          const { chromium } = require('playwright');
+          const failedRun = 'https://github.com/Artur-MF/portfolio-senai/actions/runs/43973412321';
+          (async () => {
+            const browser = await chromium.launch();
+            const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+            const capture = async (url, filename) => {
+              const response = await page.goto(url, { waitUntil: 'domcontentloaded' });
+              await page.getByText('Status', { exact: true }).first().waitFor({ timeout: 15000 });
+              if (!response?.ok() || page.url() !== url) throw new Error('Execução indisponível: ' + url);
+              await page.screenshot({ path: 'evidencias/' + filename });
+            };
+            try {
+              await capture(failedRun, 'CI-HTML-invalido.png');
+              if (process.env.DEPLOY_STATE === 'success') {
+                await capture(process.env.DEPLOY_URL, 'Deploy-GitHub-Pages.png');
+              }
+            } finally {
+              await browser.close();
+            }
+          })().catch(error => { console.error(error); process.exitCode = 1; });
+          JS
+      - name: Disponibilizar os prints
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prints-atividade-devops
+          path: evidencias/*.png
+          if-no-files-found: error
