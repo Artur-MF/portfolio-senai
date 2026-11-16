@@ -8,7 +8,7 @@ permissions:
 jobs:
   screenshots:
     if: github.head_ref == 'evidencias-atividade-devops'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Preparar captura
@@ -20,6 +20,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir evidencias
+          gh api repos/Artur-MF/portfolio-senai/actions/workflows/deploy.yml/runs?branch=main --jq '.workflow_runs[0] | {html_url, status, conclusion}' || true
+          gh api repos/Artur-MF/portfolio-senai/pages --jq '{html_url, status, build_type}' || true
+          gh api repos/Artur-MF/portfolio-senai/branches/main --jq '.protected' || true
           echo 'DEPLOY_URL='$(gh api repos/Artur-MF/portfolio-senai/actions/workflows/deploy.yml/runs?branch=main --jq '.workflow_runs[0].html_url // empty' || true) >> "$GITHUB_ENV"
           echo 'DEPLOY_STATE='$(gh api repos/Artur-MF/portfolio-senai/actions/workflows/deploy.yml/runs?branch=main --jq '.workflow_runs[0].conclusion // empty' || true) >> "$GITHUB_ENV"
       - name: Capturar as telas do GitHub Actions
