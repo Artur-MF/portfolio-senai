@@ -1,0 +1,56 @@
+name: CI do portfólio
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  lint:
+    name: Linter (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - name: Baixar o código do PR
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Exigir index.html na raiz
+        shell: bash
+        run: |
+          if [[ ! -f index.html || -L index.html ]]; then
+            echo "::error::O arquivo index.html deve existir na raiz do projeto."
+            exit 1
+          fi
+      - name: Preparar o Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Instalar o HTMLHint
+        run: npm install --prefix "$RUNNER_TEMP/portfolio-linter" --no-audit --no-fund --ignore-scripts htmlhint@1.1.4
+      - name: Validar a estrutura do HTML
+        run: |
+          git ls-files -z -- '*.html' '*.htm' |
+            xargs -0 "$RUNNER_TEMP/portfolio-linter/node_modules/.bin/htmlhint" --config .htmlhintrc
+      - name: Limitar cada arquivo a 500 KB
+        run: |
+          oversized=$(find . -path './.git' -prune -o -type f -size +500000c -print)
+          if [[ -n "$oversized" ]]; then
+            echo "::error::Existem arquivos acima de 500 KB."
+            printf '%s\n' "$oversized"
+            exit 1
+          fi
+      - name: Bloquear marcadores e termos sensíveis no site
+        run: |
+          if git grep -Iliw -E 'TODO|FIXME|senha|password' -- '*.html' '*.htm' '*.css' '*.js' images/; then
+            echo "::error::Remova os marcadores ou termos proibidos dos arquivos indicados."
+            exit 1
+          else
+            status=$?
+            [[ "$status" -eq 1 ]] || exit "$status"
+          fi
+      - name: Verificar links, imagens e âncoras
+        run: python3 scripts/check_links.py
