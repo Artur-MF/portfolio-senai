@@ -27,7 +27,11 @@ jobs:
           echo 'HTML, CSS e imagem conferidos no endereço público.'
           gh api repos/Artur-MF/portfolio-senai/actions/workflows/deploy.yml/runs?branch=main --jq '.workflow_runs[0] | {html_url, status, conclusion}' || true
           gh api repos/Artur-MF/portfolio-senai/pages --jq '{html_url, status, build_type}' || true
-          gh api repos/Artur-MF/portfolio-senai/branches/main --jq '.protected' || true
+          gh api repos/Artur-MF/portfolio-senai/branches/main --jq '{protected, protection}'
+          gh api repos/Artur-MF/portfolio-senai/rules/branches/main --jq '[.[] | {type, parameters}]' || true
+          if gh api --silent repos/Artur-MF/portfolio-senai/collaborators/09116428-collab; then
+            echo 'Acesso de colaboradora confirmado.'
+          fi
           echo 'DEPLOY_URL='$(gh api repos/Artur-MF/portfolio-senai/actions/workflows/deploy.yml/runs?branch=main --jq '.workflow_runs[0].html_url // empty' || true) >> "$GITHUB_ENV"
           echo 'DEPLOY_STATE='$(gh api repos/Artur-MF/portfolio-senai/actions/workflows/deploy.yml/runs?branch=main --jq '.workflow_runs[0].conclusion // empty' || true) >> "$GITHUB_ENV"
       - name: Capturar as telas do GitHub Actions
