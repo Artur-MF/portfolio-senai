@@ -1,0 +1,44 @@
+name: Deploy no GitHub Pages
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+jobs:
+  package:
+    name: Preparar o site
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Baixar o código aprovado
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Separar os arquivos públicos
+        run: |
+          test -f index.html
+          mkdir _site
+          cp -- *.html style.css _site/
+          cp -r -- images _site/
+      - name: Empacotar o site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  deploy:
+    name: Publicar no GitHub Pages
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@v4
